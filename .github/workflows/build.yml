@@ -1,0 +1,47 @@
+name: build
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read           # least-privilege: CI can only read the repo
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache JUCE deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: macos-juce-8.0.4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build (universal x86_64 + arm64)
+        run: cmake --build build --config Release -j3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Musicaguide-macOS
+          path: build/Musicaguide_artefacts/Release
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache JUCE deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: windows-juce-8.0.4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Musicaguide-Windows
+          path: build/Musicaguide_artefacts/Release
+          if-no-files-found: error
