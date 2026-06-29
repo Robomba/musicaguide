@@ -2,10 +2,11 @@ name: build
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   workflow_dispatch:
 
 permissions:
-  contents: read           # least-privilege: CI can only read the repo
+  contents: read           # least-privilege default for build jobs
 
 jobs:
   macos:
@@ -45,3 +46,38 @@ jobs:
           name: Musicaguide-Windows
           path: build/Musicaguide_artefacts/Release
           if-no-files-found: error
+
+  # Bundle the builds into a GitHub Release ONLY when you push a tag like v0.1.0.
+  # Gives stable download URLs your site can link:
+  #   https://github.com/<you>/musicaguide/releases/latest/download/Musicaguide-macOS.zip
+  release:
+    needs: [ macos, windows ]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # only THIS job can write (create the release)
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Musicaguide-macOS
+          path: mac
+      - uses: actions/download-artifact@v4
+        with:
+          name: Musicaguide-Windows
+          path: win
+      - name: Zip builds
+        run: |
+          (cd mac && zip -r ../Musicaguide-macOS.zip .)
+          (cd win && zip -r ../Musicaguide-Windows.zip .)
+      - name: Create / update Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            Musicaguide-macOS.zip Musicaguide-Windows.zip \
+            --repo "${{ github.repository }}" \
+            --title "Musicaguide ${{ github.ref_name }}" \
+            --notes "Automated build. Unsigned — macOS: right-click the plugin > Open the first time." \
+            || gh release upload "${{ github.ref_name }}" \
+                 Musicaguide-macOS.zip Musicaguide-Windows.zip \
+                 --repo "${{ github.repository }}" --clobber
