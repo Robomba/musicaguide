@@ -37,6 +37,11 @@ SettingsComponent::SettingsComponent (FreemiumManager& fm)
 
     addAndMakeVisible (modelCombo);
     styleCombo (modelCombo);
+    // Editable on purpose. Providers retire model IDs on their own schedule, and a fixed
+    // list compiled into the binary means a deprecation bricks every installed copy until
+    // a rebuild ships. The dropdown is suggestions, not a cage: any valid ID can be typed.
+    modelCombo.setEditableText (true);
+    modelCombo.setTextWhenNothingSelected ("type any model ID your provider supports");
 
     addAndMakeVisible (keyLabel);
     styleLabel (keyLabel);
@@ -105,8 +110,8 @@ void SettingsComponent::updateProviderModels()
     else
     {
         modelCombo.addItem ("claude-haiku-4-5-20251001", 1);
-        modelCombo.addItem ("claude-sonnet-4-6",         2);
-        modelCombo.addItem ("claude-opus-4-8",           3);
+        modelCombo.addItem ("claude-sonnet-5",           2);
+        modelCombo.addItem ("claude-opus-5",             3);
         modelCombo.setSelectedId (1, juce::dontSendNotification);
     }
 }
@@ -118,9 +123,17 @@ void SettingsComponent::loadCurrentSettings()
     updateProviderModels();
 
     auto savedModel = freemiumManager.getModel();
+    bool matchedSaved = false;
     for (int i = 0; i < modelCombo.getNumItems(); ++i)
         if (modelCombo.getItemText (i) == savedModel)
+        {
             modelCombo.setSelectedId (i + 1, juce::dontSendNotification);
+            matchedSaved = true;
+        }
+    // A custom (typed) model is not in the suggestion list. Keep showing it rather than
+    // silently snapping back to the default, which would lose the user's choice.
+    if (! matchedSaved && savedModel.isNotEmpty())
+        modelCombo.setText (savedModel, juce::dontSendNotification);
 
     // Load key from secure store into editor (shows current stored value)
     if (freemiumManager.hasApiKey())
