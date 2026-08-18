@@ -48,7 +48,9 @@ juce::String FreemiumManager::getModel() const
     auto* p = prefs();
     if (!p) return "gpt-4o-mini";
     auto prov = p->getValue ("provider", "openai");
-    auto defaultModel = prov == "anthropic" ? "claude-haiku-4-5-20251001" : "gpt-4o-mini";
+    juce::String defaultModel = "gpt-4o-mini";
+    if      (prov == "anthropic") defaultModel = "claude-haiku-4-5-20251001";
+    else if (prov == "groq")      defaultModel = "openai/gpt-oss-20b";
     return p->getValue ("model", defaultModel);
 }
 

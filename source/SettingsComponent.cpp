@@ -29,6 +29,7 @@ SettingsComponent::SettingsComponent (FreemiumManager& fm)
     styleCombo (providerCombo);
     providerCombo.addItem ("OpenAI",    1);
     providerCombo.addItem ("Anthropic", 2);
+    providerCombo.addItem ("Groq (free tier)", 3);
     providerCombo.setSelectedId (1, juce::dontSendNotification);
     providerCombo.onChange = [this] { updateProviderModels(); };
 
@@ -49,7 +50,7 @@ SettingsComponent::SettingsComponent (FreemiumManager& fm)
     addAndMakeVisible (keyEditor);
     keyEditor.setPasswordCharacter (0x2022);
     keyEditor.setMultiLine (false);
-    keyEditor.setTextToShowWhenEmpty ("sk-... or sk-ant-...", Colors::textSub);
+    keyEditor.setTextToShowWhenEmpty ("sk-...  /  sk-ant-...  /  gsk_...", Colors::textSub);
     keyEditor.setFont (juce::Font (13.f));
     keyEditor.setColour (juce::TextEditor::backgroundColourId,     Colors::surface2);
     keyEditor.setColour (juce::TextEditor::textColourId,           Colors::textMain);
@@ -89,7 +90,8 @@ SettingsComponent::SettingsComponent (FreemiumManager& fm)
     addAndMakeVisible (linkLabel);
     linkLabel.setFont (juce::Font (11.f));
     linkLabel.setColour (juce::Label::textColourId, Colors::accentLt);
-    linkLabel.setText ("Get a key:  platform.openai.com   or   console.anthropic.com",
+    linkLabel.setText ("Get a key:  platform.openai.com   ·   console.anthropic.com"
+                       "   ·   console.groq.com/keys (free)",
                        juce::dontSendNotification);
     linkLabel.setJustificationType (juce::Justification::centred);
 
@@ -100,26 +102,36 @@ SettingsComponent::SettingsComponent (FreemiumManager& fm)
 void SettingsComponent::updateProviderModels()
 {
     modelCombo.clear (juce::dontSendNotification);
-    if (providerCombo.getSelectedId() == 1)
-    {
-        modelCombo.addItem ("gpt-4o-mini", 1);
-        modelCombo.addItem ("gpt-4o",      2);
-        modelCombo.addItem ("gpt-4-turbo", 3);
-        modelCombo.setSelectedId (1, juce::dontSendNotification);
-    }
-    else
+    const auto prov = providerCombo.getSelectedId();
+
+    if (prov == 2)
     {
         modelCombo.addItem ("claude-haiku-4-5-20251001", 1);
         modelCombo.addItem ("claude-sonnet-5",           2);
         modelCombo.addItem ("claude-opus-5",             3);
-        modelCombo.setSelectedId (1, juce::dontSendNotification);
     }
+    else if (prov == 3)
+    {
+        // Groq's free tier. Verified against console.groq.com/docs/models (2026-08-18).
+        // Groq retired every Llama chat model from production, which is exactly the kind
+        // of rotation the editable box above exists to absorb.
+        modelCombo.addItem ("openai/gpt-oss-20b",  1);   // fastest (~1000 t/s)
+        modelCombo.addItem ("openai/gpt-oss-120b", 2);   // strongest open-weight
+        modelCombo.addItem ("groq/compound",       3);   // agentic system w/ web search
+    }
+    else
+    {
+        modelCombo.addItem ("gpt-4o-mini", 1);
+        modelCombo.addItem ("gpt-4o",      2);
+    }
+    modelCombo.setSelectedId (1, juce::dontSendNotification);
 }
 
 void SettingsComponent::loadCurrentSettings()
 {
     auto prov = freemiumManager.getProvider();
-    providerCombo.setSelectedId (prov == "anthropic" ? 2 : 1, juce::dontSendNotification);
+    providerCombo.setSelectedId (prov == "anthropic" ? 2 : prov == "groq" ? 3 : 1,
+                                 juce::dontSendNotification);
     updateProviderModels();
 
     auto savedModel = freemiumManager.getModel();
@@ -146,7 +158,8 @@ void SettingsComponent::loadCurrentSettings()
 void SettingsComponent::saveSettings()
 {
     auto key   = keyEditor.getText().trim();
-    auto prov  = providerCombo.getSelectedId() == 2 ? "anthropic" : "openai";
+    const auto provId = providerCombo.getSelectedId();
+    const char* prov = provId == 2 ? "anthropic" : provId == 3 ? "groq" : "openai";
     auto model = modelCombo.getText();
 
     if (key.isEmpty())

@@ -126,7 +126,11 @@ void LLMProvider::RequestThread::run()
     }
     else
     {
-        url  = "https://api.openai.com/v1/chat/completions";
+        // Groq is OpenAI-wire-compatible: same request body, same bearer auth, same
+        // response shape - only the host differs. So it reuses the OpenAI path entirely.
+        url  = provider == "groq"
+                 ? "https://api.groq.com/openai/v1/chat/completions"
+                 : "https://api.openai.com/v1/chat/completions";
         body = buildOpenAIRequest (model, messages);
         extraHeaders = "Authorization: Bearer " + apiKey + "\r\n"
                        "Content-Type: application/json";
