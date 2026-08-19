@@ -146,10 +146,14 @@ void LLMProvider::RequestThread::run()
     juce::URL httpUrl (url);
     httpUrl = httpUrl.withPOSTData (body);
 
-    // connectionTimeoutMs covers connect + transfer on most platforms (30 s)
+    // connectionTimeoutMs covers connect + transfer on most platforms (30 s).
+    // statusCode lets us tell "rate limited" apart from a real failure - critical on
+    // free tiers (Groq free: 30 req/min, 8K tokens/min), where 429 is routine, not a bug.
+    int statusCode = 0;
     auto stream = httpUrl.createInputStream (
         juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inPostData)
             .withExtraHeaders (extraHeaders)
+            .withStatusCode (&statusCode)
             .withConnectionTimeoutMs (30000));
 
     if (threadShouldExit())
@@ -165,6 +169,15 @@ void LLMProvider::RequestThread::run()
 
     if (threadShouldExit())
         return;
+
+    if (statusCode == 429)
+    {
+        fireCallback ({}, false,
+                      "Rate limited: the provider's per-minute cap was hit. "
+                      "Wait ~30 seconds and try again. (Free tiers hit this cap "
+                      "sooner; a paid key raises it.)");
+        return;
+    }
 
     juce::String content = isAnthropic
                              ? extractAnthropicContent (responseText)

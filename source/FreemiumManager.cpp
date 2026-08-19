@@ -50,7 +50,7 @@ juce::String FreemiumManager::getModel() const
     auto prov = p->getValue ("provider", "openai");
     juce::String defaultModel = "gpt-4o-mini";
     if      (prov == "anthropic") defaultModel = "claude-haiku-4-5-20251001";
-    else if (prov == "groq")      defaultModel = "openai/gpt-oss-20b";
+    else if (prov == "groq")      defaultModel = "openai/gpt-oss-120b";
     return p->getValue ("model", defaultModel);
 }
 

@@ -231,10 +231,26 @@ void ChatComponent::sendMessage()
     thinkingLabel.setText ("Thinking...", juce::dontSendNotification);
     thinkingLabel.setVisible (true);
 
+    // Send a sliding window, not the whole conversation. Full history grows
+    // quadratically in tokens and blows through free-tier per-minute caps
+    // (Groq free: 8K TPM) about ten exchanges in - the user sees a 429 and
+    // blames the plugin. The system prompt is re-added inside LLMProvider, and
+    // stale early context degrades answers anyway, so the window is pure win.
+    // The window must start on a "user" message (Anthropic rejects a leading
+    // "assistant" turn), so advance past an orphaned assistant reply if needed.
+    constexpr int kHistoryWindow = 8;
+    int start = juce::jmax (0, history.size() - kHistoryWindow);
+    while (start < history.size() && history.getReference (start).role != "user")
+        ++start;
+
+    juce::Array<LLMProvider::Message> window;
+    for (int i = start; i < history.size(); ++i)
+        window.add (history.getReference (i));
+
     llmProvider.send (freemiumManager.getApiKey(),
                       freemiumManager.getProvider(),
                       freemiumManager.getModel(),
-                      history,
+                      window,
         [this, text] (const juce::String& response, bool success, const juce::String& errMsg)
         {
             isWaiting = false;

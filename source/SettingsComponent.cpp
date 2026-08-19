@@ -115,9 +115,12 @@ void SettingsComponent::updateProviderModels()
         // Groq's free tier. Verified against console.groq.com/docs/models (2026-08-18).
         // Groq retired every Llama chat model from production, which is exactly the kind
         // of rotation the editable box above exists to absorb.
-        modelCombo.addItem ("openai/gpt-oss-20b",  1);   // fastest (~1000 t/s)
-        modelCombo.addItem ("openai/gpt-oss-120b", 2);   // strongest open-weight
-        modelCombo.addItem ("groq/compound",       3);   // agentic system w/ web search
+        // 120b first: the free plan gives it the SAME limits as 20b (30 RPM / 8K TPM),
+        // so the stronger model costs nothing extra - and music theory is symbolic
+        // reasoning, where small models produce confidently wrong note spellings.
+        modelCombo.addItem ("openai/gpt-oss-120b", 1);   // default: strongest open-weight
+        modelCombo.addItem ("openai/gpt-oss-20b",  2);   // faster, weaker
+        modelCombo.addItem ("groq/compound",       3);   // agentic w/ web search (70K TPM)
     }
     else
     {
