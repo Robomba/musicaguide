@@ -33,4 +33,7 @@ private:
     juce::PropertiesFile* propsFile = nullptr;
 
     juce::PropertiesFile* prefs() const;
+
+    // One-shot repair for saved model IDs the provider has since retired.
+    void migrateRetiredModels();
 };
