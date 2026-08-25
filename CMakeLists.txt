@@ -1,4 +1,15 @@
 cmake_minimum_required(VERSION 3.22)
+
+# These MUST be set before project() and before any target exists.
+# CMAKE_OSX_ARCHITECTURES is read when a target is created, so setting it further
+# down the file only took effect on a SECOND configure over a warm cache. Every cold
+# configure - CI, a fresh clone, a wiped build dir - silently produced an arm64-only
+# binary that will not load on Intel Macs, while the cache still read "x86_64;arm64".
+if(APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
+endif()
+
 project(Musicaguide VERSION 0.2.0)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -60,10 +71,9 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(Musicaguide PRIVATE CURL::libcurl)
 endif()
 
-# Universal binary on Apple Silicon Macs + Security framework for Keychain
+# Security framework for Keychain. (Architecture/deployment target are set at the top
+# of this file, before project() - they have no effect once targets exist.)
 if(APPLE)
-    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
     target_link_libraries(Musicaguide PRIVATE "-framework Security")
 endif()
 
