@@ -34,14 +34,15 @@ jobs:
         run: HOME="$(mktemp -d)" ./build/MusicaguideTests_artefacts/Debug/MusicaguideTests
 
   macos:
-    runs-on: macos-14
+    # macos-14 runners were retired by GitHub ("configuration not supported").
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache JUCE deps
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: macos-juce-8.0.4
+          key: macos-latest-juce-8.0.4
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build (universal x86_64 + arm64)
