@@ -124,7 +124,7 @@ void ChatComponent::addWelcomeMessage()
 {
     appendEntry (ChatEntry::Role::Assistant,
                  "Hey! I'm your Musicaguide. Ask me anything about music theory, "
-                 "chords, scales, production, mixing, or arrangement — whatever "
+                 "chords, scales, production, mixing, or arrangement, whatever "
                  "you're working on right now.");
 
     if (! freemiumManager.hasShownAnalyticsDisclosure())
@@ -251,7 +251,8 @@ void ChatComponent::sendMessage()
                       freemiumManager.getProvider(),
                       freemiumManager.getModel(),
                       window,
-        [this, text] (const juce::String& response, bool success, const juce::String& errMsg)
+        [this, text, requestedModel = freemiumManager.getModel()]
+        (const juce::String& response, bool success, const juce::String& errMsg, const juce::String& usedModel)
         {
             isWaiting = false;
             thinkingLabel.setVisible (false);
@@ -263,6 +264,17 @@ void ChatComponent::sendMessage()
                 asstMsg.role    = "assistant";
                 asstMsg.content = response;
                 history.add (asstMsg);
+
+                // The saved model was retired and the fallback answered: keep the fallback
+                // so the next message works first time, and say so once.
+                if (usedModel.isNotEmpty() && usedModel != requestedModel)
+                {
+                    freemiumManager.setModel (usedModel);
+                    appendEntry (ChatEntry::Role::Assistant,
+                                 "(" + requestedModel + " is no longer available, so I switched you to "
+                                 + usedModel + ". You can change it in Settings.)");
+                }
+
                 appendEntry (ChatEntry::Role::Assistant, response);
 
                 if (freemiumManager.isAnalyticsEnabled())

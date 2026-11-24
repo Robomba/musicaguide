@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "updated": "2026-11-24",
+  "note": "MusicaGuide model manifest. Live copy: https://www.leosolproducts.com/musicaguide/models.json. This file can only change model IDs and request sizes, never endpoints or headers.",
+  "providers": {
+    "openai": {
+      "default": "gpt-6-luna",
+      "fallback": "gpt-6-luna",
+      "suggested": ["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"],
+      "token_param": "max_completion_tokens",
+      "max_output_tokens": 4096,
+      "send_temperature": false,
+      "list_include": ["gpt-"],
+      "list_exclude": ["audio", "realtime", "tts", "transcribe", "image", "search", "embedding", "codex", "instruct", "moderation", "cyber"]
+    },
+    "anthropic": {
+      "default": "claude-haiku-5-5",
+      "fallback": "claude-haiku-5-5",
+      "suggested": ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"],
+      "token_param": "max_tokens",
+      "max_output_tokens": 2048,
+      "send_temperature": false,
+      "list_include": ["claude-"],
+      "list_exclude": []
+    },
+    "groq": {
+      "default": "openai/gpt-oss-120b",
+      "fallback": "openai/gpt-oss-120b",
+      "suggested": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b", "groq/compound"],
+      "token_param": "max_tokens",
+      "max_output_tokens": 1024,
+      "send_temperature": true,
+      "temperature": 0.7,
+      "list_include": [],
+      "list_exclude": ["whisper", "guard", "tts", "orpheus", "playai", "distil"]
+    }
+  },
+  "retired": {
+    "openai": {
+      "gpt-4o-mini*": "gpt-6-luna",
+      "gpt-4o*": "gpt-6-luna",
+      "chatgpt-4o*": "gpt-6-luna",
+      "gpt-4.1*": "gpt-6-luna",
+      "gpt-5-mini*": "gpt-6.1-terra",
+      "gpt-5": "gpt-6.1-sol",
+      "gpt-5-2025-08-07": "gpt-6.1-sol"
+    },
+    "anthropic": {},
+    "groq": {
+      "llama*": "openai/gpt-oss-120b",
+      "meta-llama/*": "openai/gpt-oss-120b",
+      "qwen/qwen3-32b": "openai/gpt-oss-120b",
+      "moonshotai/kimi-k2*": "openai/gpt-oss-120b"
+    }
+  }
+}

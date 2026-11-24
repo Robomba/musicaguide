@@ -10,7 +10,7 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
 endif()
 
-project(Musicaguide VERSION 0.2.0)
+project(Musicaguide VERSION 0.3.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,12 +50,17 @@ target_sources(Musicaguide PRIVATE
     source/ChatComponent.cpp
     source/SettingsComponent.cpp
     source/LLMProvider.cpp
+    source/ModelManifest.cpp
     source/FreemiumManager.cpp
     source/SecureStore.cpp
     source/Analytics.cpp
 )
 
 target_include_directories(Musicaguide PRIVATE source)
+
+# Compiled-in snapshot of the model manifest (offline fallback). The live copy is
+# https://www.leosolproducts.com/musicaguide/models.json - keep them in step.
+juce_add_binary_data(MusicaguideData SOURCES resources/models.json)
 
 target_compile_definitions(Musicaguide PUBLIC
     JUCE_WEB_BROWSER=0
@@ -84,6 +89,7 @@ endif()
 
 target_link_libraries(Musicaguide
     PRIVATE
+        MusicaguideData
         juce::juce_audio_utils
         juce::juce_gui_extra
     PUBLIC
@@ -94,3 +100,24 @@ target_link_libraries(Musicaguide
 
 # Generate JuceHeader.h (source files include <JuceHeader.h>)
 juce_generate_juce_header(Musicaguide)
+
+# ── Unit tests (off by default; CI turns them on) ─────────────────────────────
+option(MUSICAGUIDE_TESTS "Build the MusicaguideTests console app" OFF)
+if(MUSICAGUIDE_TESTS)
+    juce_add_console_app(MusicaguideTests PRODUCT_NAME "MusicaguideTests")
+    target_sources(MusicaguideTests PRIVATE
+        tests/WireTests.cpp
+        source/ModelManifest.cpp
+        source/LLMProvider.cpp)
+    target_include_directories(MusicaguideTests PRIVATE source)
+    target_compile_definitions(MusicaguideTests PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    target_link_libraries(MusicaguideTests PRIVATE
+        MusicaguideData
+        juce::juce_core
+        juce::juce_events
+        juce::juce_data_structures
+        juce::juce_gui_basics
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags)
+    juce_generate_juce_header(MusicaguideTests)
+endif()

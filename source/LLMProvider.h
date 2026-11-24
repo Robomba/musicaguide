@@ -11,14 +11,17 @@ public:
         juce::String content;
     };
 
+    // usedModel is the model that actually answered. It differs from the requested
+    // model only when the requested one was retired and the manifest fallback answered.
     using ResponseCallback = std::function<void (const juce::String& response,
                                                   bool success,
-                                                  const juce::String& errorMsg)>;
+                                                  const juce::String& errorMsg,
+                                                  const juce::String& usedModel)>;
 
     ~LLMProvider();
 
     void send (const juce::String& apiKey,
-               const juce::String& provider,  // "openai" | "anthropic"
+               const juce::String& provider,  // "openai" | "anthropic" | "groq"
                const juce::String& model,
                const juce::Array<Message>& messages,
                ResponseCallback callback);
@@ -43,12 +46,22 @@ private:
         void run() override;
 
     private:
-        void fireCallback (const juce::String& response, bool success, const juce::String& err)
+        struct Attempt
+        {
+            int          status = 0;
+            bool         connected = false;
+            juce::String body;
+        };
+
+        Attempt post (const juce::String& modelId);
+
+        void fireCallback (const juce::String& response, bool success,
+                           const juce::String& err, const juce::String& used)
         {
             auto cb = callback;
-            juce::MessageManager::callAsync ([cb, response, success, err]()
+            juce::MessageManager::callAsync ([cb, response, success, err, used]()
             {
-                cb (response, success, err);
+                cb (response, success, err, used);
             });
         }
 

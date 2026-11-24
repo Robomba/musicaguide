@@ -1,4 +1,5 @@
 #include "FreemiumManager.h"
+#include "ModelManifest.h"
 
 FreemiumManager::FreemiumManager()
 {
@@ -20,23 +21,29 @@ void FreemiumManager::migrateRetiredModels()
     auto* p = prefs();
     if (p == nullptr) return;
 
-    // Groq retired every Llama chat model from production (verified against
-    // console.groq.com/docs/models, 2026-08-18).
+    // A saved model ID always beats the provider default, so a retired ID on disk would
+    // break every request after the provider shuts it off. Repoint it to the replacement
+    // the model manifest names. The list of retired IDs lives in models.json (cached from
+    // the website), not in this binary, so new retirements are handled without a release.
     //
-    // A saved model ID always beats the provider default in getModel(), so the new
-    // gpt-oss-120b default only reaches FRESH installs. Anyone who already used Groq
-    // has a dead Llama ID on disk and would upgrade into exactly the breakage this
-    // release exists to fix. Repoint them once, here, on load.
-    //
-    // Deliberately a denylist of the retired family, not an allowlist of known-good
-    // IDs: the model box is editable so that users can follow provider rotations
-    // without waiting on us, and an allowlist would stomp every ID we haven't heard
-    // of yet - including the valid ones.
-    if (p->getValue ("provider") != "groq") return;
-
-    if (p->getValue ("model").startsWithIgnoreCase ("llama"))
+    // Deliberately a denylist of retired IDs, not an allowlist of known-good ones: the
+    // model box is editable so users can follow provider rotations without waiting on us,
+    // and an allowlist would stomp every valid ID we haven't heard of yet.
+    const auto provider = p->getValue ("provider");
+    const auto saved    = p->getValue ("model");
+    const auto replacement = ModelManifest::get().replacementFor (provider, saved);
+    if (replacement.isNotEmpty())
     {
-        p->setValue ("model", "openai/gpt-oss-120b");
+        p->setValue ("model", replacement);
+        p->saveIfNeeded();
+    }
+}
+
+void FreemiumManager::setModel (const juce::String& model)
+{
+    if (auto* p = prefs())
+    {
+        p->setValue ("model", model);
         p->saveIfNeeded();
     }
 }
@@ -74,12 +81,17 @@ juce::String FreemiumManager::getProvider() const
 juce::String FreemiumManager::getModel() const
 {
     auto* p = prefs();
-    if (!p) return "gpt-4o-mini";
-    auto prov = p->getValue ("provider", "openai");
-    juce::String defaultModel = "gpt-4o-mini";
-    if      (prov == "anthropic") defaultModel = "claude-haiku-4-5-20251001";
-    else if (prov == "groq")      defaultModel = "openai/gpt-oss-120b";
-    return p->getValue ("model", defaultModel);
+    const auto prov = p ? p->getValue ("provider", "openai") : juce::String ("openai");
+    const auto& manifest = ModelManifest::get();
+    const auto defaultModel = manifest.forProvider (prov).defaultModel;
+    if (p == nullptr) return defaultModel;
+
+    auto saved = p->getValue ("model", defaultModel);
+    if (saved.isEmpty()) return defaultModel;
+
+    // The manifest may have learned about a retirement since launch (background refresh).
+    auto replacement = manifest.replacementFor (prov, saved);
+    return replacement.isNotEmpty() ? replacement : saved;
 }
 
 void FreemiumManager::clearApiKey()

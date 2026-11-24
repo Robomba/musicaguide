@@ -3,21 +3,46 @@ on:
   push:
     branches: [ main, master ]
     tags: [ 'v*' ]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read           # least-privilege default for build jobs
 
 jobs:
+  # Fast gate: model manifest + provider request/response unit tests (no network).
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux deps
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libasound2-dev libfreetype-dev libfontconfig1-dev \
+            libcurl4-openssl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+            libxext-dev libxcomposite-dev mesa-common-dev ninja-build
+      - name: Cache JUCE deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: linux-juce-8.0.4
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DMUSICAGUIDE_TESTS=ON
+      - name: Build tests
+        run: cmake --build build --target MusicaguideTests
+      - name: Run tests
+        run: HOME="$(mktemp -d)" ./build/MusicaguideTests_artefacts/Debug/MusicaguideTests
+
   macos:
-    runs-on: macos-14
+    # macos-14 runners were retired by GitHub ("configuration not supported").
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache JUCE deps
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: macos-juce-8.0.4
+          key: macos-latest-juce-8.0.4
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build (universal x86_64 + arm64)
@@ -51,7 +76,7 @@ jobs:
   # Gives stable download URLs your site can link:
   #   https://github.com/<you>/musicaguide/releases/latest/download/Musicaguide-macOS.zip
   release:
-    needs: [ macos, windows ]
+    needs: [ tests, macos, windows ]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:

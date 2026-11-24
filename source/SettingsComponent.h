@@ -6,6 +6,7 @@ class SettingsComponent : public juce::Component
 {
 public:
     explicit SettingsComponent (FreemiumManager& fm);
+    ~SettingsComponent() override;
 
     void resized() override;
     void paint  (juce::Graphics& g) override;
@@ -17,6 +18,8 @@ private:
     void clearSettings();
     void updateProviderModels();
     void loadCurrentSettings();
+    void loadLiveModels();
+    juce::String selectedProvider() const;
 
     FreemiumManager& freemiumManager;
 
@@ -25,6 +28,9 @@ private:
     juce::ComboBox providerCombo;
     juce::Label   modelLabel     { {}, "Model" };
     juce::ComboBox modelCombo;
+    juce::TextButton loadModelsButton { "Load models" };
+    juce::Label   modelStatus;
+    std::unique_ptr<juce::Thread> modelListThread;
     juce::Label   keyLabel       { {}, "API Key" };
     juce::TextEditor keyEditor;
     juce::ToggleButton showKeyToggle { "Show" };
