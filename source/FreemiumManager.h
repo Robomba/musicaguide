@@ -15,7 +15,11 @@ public:
                              const juce::String& model);
     juce::String getApiKey  () const;
     juce::String getProvider() const;
-    juce::String getModel   () const;
+    juce::String getModel   () const;   // saved model, with retired IDs mapped forward
+    void         setModel   (const juce::String& model);  // used when the fallback answered
+
+    // Repoint a saved model ID the provider has since retired (per models.json).
+    void migrateRetiredModels();
     void         clearApiKey();
 
     // True only when the user has entered their own API key.
@@ -33,7 +37,4 @@ private:
     juce::PropertiesFile* propsFile = nullptr;
 
     juce::PropertiesFile* prefs() const;
-
-    // One-shot repair for saved model IDs the provider has since retired.
-    void migrateRetiredModels();
 };

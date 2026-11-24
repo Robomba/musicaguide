@@ -17,6 +17,21 @@ JUCE 8.0.4 is fetched automatically via CMake FetchContent — no manual downloa
 
 ---
 
+## Models (why updates don't need a new build)
+
+Model IDs are not hardcoded. They come from `models.json`:
+
+- **Live copy:** https://www.leosolproducts.com/musicaguide/models.json (repo `leosolproducts-site`, folder `musicaguide/`). The plugin fetches it in the background at launch and caches it in the user's app-data folder.
+- **Offline fallback:** `resources/models.json`, compiled in. Keep it in step with the live copy when you cut a release.
+- The manifest sets each provider's default, fallback, dropdown suggestions, retired-model replacements, which token-limit field to send, the output size, and whether to send temperature. It can never change an endpoint or a header, so it can't redirect anyone's API key.
+- A saved model on the retired list is repointed on launch. If a provider rejects a model as gone, the plugin retries once on the fallback and saves it.
+- **Settings > Load models** lists every model the user's own key can use right now, straight from the provider.
+- A weekly GitHub Action in `leosolproducts-site` checks the providers and opens a pull request when `models.json` needs an update.
+
+Tests: `cmake -B build -DMUSICAGUIDE_TESTS=ON && cmake --build build --target MusicaguideTests && ./build/MusicaguideTests_artefacts/Debug/MusicaguideTests`
+
+---
+
 ## Build
 
 ```bash
